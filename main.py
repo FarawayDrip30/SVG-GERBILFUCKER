@@ -3,11 +3,15 @@ import os
 from tkinter import *
 from tkinter import ttk
 from tkinter import filedialog as fd
+from tkinter import scrolledtext as st
 
 root = Tk()
 root.title("SVG GERBILFUCKER")
 frm = ttk.Frame(root, padding=10)
 frm.grid()
+
+files = None
+outputFolder = None
 
 # 0 = Leave, don't change
 # 1 = Offset X,
@@ -68,8 +72,10 @@ class CoordInst:
                 else:
                     self.pathIStr += c
 
-        print(self.oldPath)
-        print(self.newPath)
+        #print(self.oldPath)
+        #print(self.newPath)
+        #print(self.arrToString(self.oldPath))
+        print(self.arrToString(self.newPath))
 
     def addPathIStrToPath(self, pathI):
         self.oldPath.append(self.pathIStr)
@@ -80,6 +86,15 @@ class CoordInst:
             fVal += transformY
         self.newPath.append(str(fVal))
         self.pathIStr = ""
+
+    def arrToString(self, arr):
+        str = ""
+        for a in arr:
+            str += a
+            if not a in pathCommandArgCounts.keys():
+                str += ','
+        return str
+
 
 
 
@@ -93,34 +108,62 @@ def getCoordinates(content):
     transformY = float(content[commaI + 1:endBracketI])
 
     start = 0
-    #while start != -1:
-    start = content.find('d="') + 3
-    end = content.find('"', start)
-    path = content[start:end]
-    tCoordInst = CoordInst(start, end, path)
+    end = 0
+    while start != -1:
+        tstart = content.find('d="', start) + 3
+        tend = content.find('"', tstart)
+
+        # Prevent program looping back around
+        if tstart > start: start = tstart
+        else: break
+        if tend > end: end = tend
+        else: break
+
+        print(start)
+        path = content[start:end]
+        tCoordInst = CoordInst(start, end, path)
+    print("DONE!")
 
 def replaceNoneFills(content):
     content.replace("fill=\"none\"", "fill=\"#000000\" fill-opacity=\"0\" ")
 
+
 def chooseFiles():
     print("choosefiles")
+    global files
     files = fd.askopenfiles(mode="r")
     for file in files:
-        print(file.name)
+        tStr = ""
+        tStr += file.name
+    fileLabel.config(text=tStr)
+
+
+def process():
+    for file in files:
+        #print(file.name)
         opened = open(file.name, "r")
         content = opened.read()
-        print(content)
+        replaceNoneFills(content)
         getCoordinates(content)
 
 
 def chooseOutputFolder():
     folder = fd.askdirectory()
-    print(folder)
+    outputLabel.config(text=folder)
 
-ttk.Label(frm, text="SVG GERBILFUCKER").grid(column=0, row=0)
-ttk.Label(frm, text="SVG Manipulator for Pixi.js Use").grid(column=0, row=1)
+ttk.Label(frm, text="SVG GERBILFUCKER").grid(column=1, row=0)
+ttk.Label(frm, text="SVG Manipulator for Pixi.js Use").grid(column=1, row=1)
 
 ttk.Button(frm, text="Choose Files", command=chooseFiles).grid(column=0, row=3)
-ttk.Button(frm, text="Set Output Folder", command=chooseOutputFolder).grid(column=1, row=3)
+ttk.Button(frm, text="Set Output Folder", command=chooseOutputFolder).grid(column=2, row=3)
+
+fileLabelFrame = st.ScrolledText(frm, wrap=WORD, height=20, width=10)
+fileLabelFrame.grid(column=0, row=4)
+fileLabel = ttk.Label(fileLabelFrame, text="files:")
+fileLabel.pack()
+outputLabel = ttk.Label(frm, text="output folder:")
+outputLabel.grid(column=2, row=4)
+
+ttk.Button(frm, text="Process Files", command=process).grid(column=1, row=5)
 
 root.mainloop()
