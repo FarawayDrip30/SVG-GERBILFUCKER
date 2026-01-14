@@ -1,4 +1,4 @@
-import os
+import shutil
 
 from tkinter import *
 from tkinter import ttk
@@ -66,16 +66,12 @@ class CoordInst:
                 self.newPath.append(c)
                 pathI = 0
             else:
-                if c == ',':
+                if c == ',' or c == ' ':
                     self.addPathIStrToPath(pathI)
                     pathI += 1
                 else:
                     self.pathIStr += c
 
-        #print(self.oldPath)
-        #print(self.newPath)
-        #print(self.arrToString(self.oldPath))
-        print(self.arrToString(self.newPath))
 
     def addPathIStrToPath(self, pathI):
         self.oldPath.append(self.pathIStr)
@@ -107,10 +103,12 @@ def getCoordinates(content):
     endBracketI = content.find(")", commaI)
     transformY = float(content[commaI + 1:endBracketI])
 
+    tCoordInsts = []
+
     start = 0
     end = 0
     while start != -1:
-        tstart = content.find('d="', start) + 3
+        tstart = content.find(' d="', start) + 4
         tend = content.find('"', tstart)
 
         # Prevent program looping back around
@@ -121,8 +119,13 @@ def getCoordinates(content):
 
         print(start)
         path = content[start:end]
-        tCoordInst = CoordInst(start, end, path)
+        tCoordInsts.append(CoordInst(start, end, path))
     print("DONE!")
+    return tCoordInsts
+
+func replaceCoordinates(content, coordInsts):
+    for coordInst in coordInsts:
+        content[coordInst.startI:coordInst.endI] = coordInst.arrToString(coordInst.newPath)
 
 def replaceNoneFills(content):
     content.replace("fill=\"none\"", "fill=\"#000000\" fill-opacity=\"0\" ")
@@ -132,24 +135,32 @@ def chooseFiles():
     print("choosefiles")
     global files
     files = fd.askopenfiles(mode="r")
+    tStr = ""
     for file in files:
-        tStr = ""
-        tStr += file.name
+        tStr += file.name + '\n'
     fileLabel.config(text=tStr)
 
 
 def process():
-    for file in files:
-        #print(file.name)
-        opened = open(file.name, "r")
-        content = opened.read()
-        replaceNoneFills(content)
-        getCoordinates(content)
+    if files and outputFolder:
+        for file in files:
+            #print(file.name)
+            opened = open(file.name, "r")
+            content = opened.read()
+            replaceNoneFills(content)
+            getCoordinates(content)
+
+            filename = file.name[file.name.rfind('/')+1 : len(file.name)]
+            print(filename)
+            #shutil.copyfile(file.name, outputFolder+"/"+filename)
+            print(file.name, "done!")
+
 
 
 def chooseOutputFolder():
-    folder = fd.askdirectory()
-    outputLabel.config(text=folder)
+    global outputFolder
+    outputFolder = fd.askdirectory()
+    outputLabel.config(text=outputFolder)
 
 ttk.Label(frm, text="SVG GERBILFUCKER").grid(column=1, row=0)
 ttk.Label(frm, text="SVG Manipulator for Pixi.js Use").grid(column=1, row=1)
@@ -157,10 +168,11 @@ ttk.Label(frm, text="SVG Manipulator for Pixi.js Use").grid(column=1, row=1)
 ttk.Button(frm, text="Choose Files", command=chooseFiles).grid(column=0, row=3)
 ttk.Button(frm, text="Set Output Folder", command=chooseOutputFolder).grid(column=2, row=3)
 
-fileLabelFrame = st.ScrolledText(frm, wrap=WORD, height=20, width=10)
-fileLabelFrame.grid(column=0, row=4)
-fileLabel = ttk.Label(fileLabelFrame, text="files:")
-fileLabel.pack()
+#fileLabelFrame = st.ScrolledText(frm, wrap=WORD, height=20, width=10)
+#fileLabelFrame.grid(column=0, row=4)
+fileLabel = ttk.Label(frm, text="files:")
+#fileLabel.pack()
+fileLabel.grid(column=0, row=4)
 outputLabel = ttk.Label(frm, text="output folder:")
 outputLabel.grid(column=2, row=4)
 
